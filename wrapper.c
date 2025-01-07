@@ -65,7 +65,7 @@ void initPlayers(float rx, float ry, float rs, float rd, float rf, float dx, flo
     discBodyDef.type = b2_dynamicBody;
     position.x = dx;
     position.y = dy;
-    rectBodyDef.position = position;
+    discBodyDef.position = position;
     
     gDiscPlayer = b2CreateBody(gWorldID, &discBodyDef);
     b2Circle disc;
@@ -137,7 +137,7 @@ bodyPose* getPose(unsigned int idx) {
     while (elem) {
         if (elem->ref == idx) {
             tmpPose.position = b2Body_GetPosition(elem->b2Body);
-            tmpPose.rotation = b2Rot_GetAngle(b2Body_GetRotation(elem->b2Body));
+            tmpPose.rotatdion = b2Rot_GetAngle(b2Body_GetRotation(elem->b2Body));
         } else elem = elem->next;
     }
     return &tmpPose; // FIXME: signal error if not found
