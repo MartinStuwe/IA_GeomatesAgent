@@ -87,7 +87,7 @@
    function draw_disc(desc, idx) {
        let end_idx = find_obj_end(desc,idx);
        let args = ((desc.substring(idx,end_idx)).trim()).split(" ");
-       //console.log(args);
+       console.log(args);
        const canvas = document.getElementById("myCanvas");
        const ctx = canvas.getContext("2d");
        let x = parseFloat(args[0]);
@@ -165,7 +165,7 @@
        }
    }
 
-   const socket = new WebSocket('ws://localhost:8026');
+   const socket = new WebSocket('ws://localhost:8000');
    
    socket.onerror = function(event) {
        alert('socket error');

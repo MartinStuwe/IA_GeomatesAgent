@@ -41,16 +41,18 @@
   (load "sha1.lisp")
   (load "levels.lisp")
   ; (require :sb-alien) ;; not needed in modern SBCL (uncomment only if sb-alien module is unknown)
+  (require :sb-bsd-sockets)  ;; for networking
   (require :sb-concurrency)) ;; for lock-free threadsafe queues
+
 
 (defparameter *path-to-wrapper-library* (or (probe-file "wrapper.so")
 					    (probe-file "ADD/YOUR/PATH/HERE"))
   "path to the shared library that wraps around the static box2d library")
 
-(defparameter *agent-port* 45685
+(defparameter *agent-port* 45678
   "ports on which agents connect to the game")
 
-(defparameter *gui-port* 8026
+(defparameter *gui-port* 8000
   "port on which the browser GUI connects to the game")
 
 ;;;
@@ -95,11 +97,11 @@
 		 (/ +rect-length+ 4.0f0) ; rectangle size (scaled by 4 in library)
 		 1.0f0 ; density
 		 0.3f0 ; friction
-		 (coerce (second disc) 'single-float) ; starting position disc x/y)
+		 (coerce (second disc) 'single-float) ; starting position disc x/y
 		 (coerce (third disc) 'single-float)
-		 +disc-radius+
-		 1.0f0
-		 0.3f0)
+		 +disc-radius+ ; radius
+		 1.0f0 ; density
+		 0.3f0); friction
     (loop for (pf x1 y1 x2 y2) in platforms do
       (worldinsertplatform (coerce x1 'single-float) (coerce y1 'single-float) (coerce x2 'single-float) (coerce y2 'single-float)))
     (values diamonds platforms)))
@@ -329,31 +331,32 @@
 					 (109 (setq message-from-rect (append message-from-rect (read rect-agent-stream nil nil nil)))) ; m(...) see note on messages above
 					 (113 (setq rect-aborts? t))))) ; q
 				   ;; step simulation and post updates to agents
-				   (stepworld)
 				   (let (disc-pos-x disc-pos-y rect-pos-x rect-pos-y rect-rotation rect-ratio)
-				     (let ((pose-struct (deref (getDiscPlayerPose))))
-				       (setq disc-pos-x (slot pose-struct 'x)
-					     disc-pos-y (slot pose-struct 'y)))
-				     (let ((pose-struct (deref (getRectPlayerPose))))
-				       (setq rect-pos-x (slot pose-struct 'x)
-					     rect-pos-y (slot pose-struct 'y)
-					     rect-rotation (slot pose-struct 'r)
-					     rect-ratio (slot pose-struct 's)))
-				     ;; check for diamonds taken
-				     (let ((d (find-if #'(lambda (d)
-							   (> 2.0 (abs (- (complex (second d) (third d))
-									  (complex disc-pos-x disc-pos-y)))))
-						       diamonds)))
-				       (when d
-					 (setq diamonds (delete d diamonds))
-					 (incf diamonds-disc)))
-				     (let ((d (find-if #'(lambda (d) ;; FIXME: form des rechtecks beachten!
-							   (> 2.0 (abs (- (complex (second d) (third d))
-									  (complex rect-pos-x rect-pos-y)))))
-						       diamonds)))
-				       (when d
-					 (setq diamonds (delete d diamonds))
-					 (incf diamonds-rect)))
+				     (dotimes (i 4)
+				       (stepworld)
+				       (let ((pose-struct (deref (getDiscPlayerPose))))
+					 (setq disc-pos-x (slot pose-struct 'x)
+					       disc-pos-y (slot pose-struct 'y)))
+				       (let ((pose-struct (deref (getRectPlayerPose))))
+					 (setq rect-pos-x (slot pose-struct 'x)
+					       rect-pos-y (slot pose-struct 'y)
+					       rect-rotation (slot pose-struct 'r)
+					       rect-ratio (slot pose-struct 's)))
+				       ;; check for diamonds taken
+				       (let ((d (find-if #'(lambda (d)
+							     (> 2.0 (abs (- (complex (second d) (third d))
+									    (complex disc-pos-x disc-pos-y)))))
+							 diamonds)))
+					 (when d
+					   (setq diamonds (delete d diamonds))
+					   (incf diamonds-disc)))
+				       (let ((d (find-if #'(lambda (d) ;; FIXME: form des rechtecks beachten!
+							     (> 2.0 (abs (- (complex (second d) (third d))
+									    (complex rect-pos-x rect-pos-y)))))
+							 diamonds)))
+					 (when d
+					   (setq diamonds (delete d diamonds))
+					   (incf diamonds-rect))))
 
 				     ;; send current scene to anyone listening
 				     (let* ((*print-pretty* nil)
