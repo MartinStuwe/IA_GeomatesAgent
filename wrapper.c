@@ -109,7 +109,7 @@ void worldInsertPlatform(float px, float py, float sx, float sy) {
 
     b2BodyId platformId = b2CreateBody(gWorldID, &bodyDef);
 
-    b2Polygon dBox = b2MakeBox(fabsf(sx-px),fabsf(sy-py));
+    b2Polygon dBox = b2MakeBox(0.5*fabsf(sx-px),0.5*fabsf(sy-py));
     b2ShapeDef shapeDef = b2DefaultShapeDef();
     shapeDef.density = 1.0f;
     shapeDef.friction = 0.3f;
@@ -137,7 +137,7 @@ bodyPose* getPose(unsigned int idx) {
     while (elem) {
         if (elem->ref == idx) {
             tmpPose.position = b2Body_GetPosition(elem->b2Body);
-            tmpPose.rotatdion = b2Rot_GetAngle(b2Body_GetRotation(elem->b2Body));
+            tmpPose.rotation = b2Rot_GetAngle(b2Body_GetRotation(elem->b2Body));
         } else elem = elem->next;
     }
     return &tmpPose; // FIXME: signal error if not found
