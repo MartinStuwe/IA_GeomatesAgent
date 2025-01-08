@@ -310,9 +310,9 @@
 				       (format t "~&received from disc agent: ~a~%" (or chr (format nil "ERROR: ~a" err)))
 				       (setq disc-listens? t)
 				       (case chr
-					 (97 (moveDiscPlayer -2.0f0)) ; a
-					 (100 (moveDiscPlayer +2.0f0)) ; d
-					 (119 (jumpDiscPlayer +5.0f0)) ; w
+					 (97 (moveDiscPlayer -5.0f0)) ; a
+					 (100 (moveDiscPlayer +5.0f0)) ; d
+					 (119 (jumpDiscPlayer +50.0f0)) ; w
 					 ;; messages get appended in order to make sure they will be delivered, not overridded by a newly received one. To this end,  message-from-disc gets reset to NIL after delivery to rect agent further below
 					 (109 (setq message-from-disc (append message-from-disc (read disc-agent-stream nil nil nil)))) ; m(...)
 					 (113 (setq disc-aborts? t))))) ; q
@@ -324,15 +324,15 @@
 				       (format t "~&received from rect agent: ~a~%" (or chr (format nil "ERROR: ~a" err)))
 				       (setq rect-listens? t)
 				       (case chr
-					 (97 (moveRectPlayer -2.0f0)) ; a
-					 (100 (moveRectPlayer +2.0f0)) ; d
+					 (97 (moveRectPlayer -5.0f0)) ; a
+					 (100 (moveRectPlayer +5.0f0)) ; d
 					 (115 (transformRectPlayer -0.5f0)) ; s
 					 (119 (transformRectPlayer +0.5f0)) ; w
 					 (109 (setq message-from-rect (append message-from-rect (read rect-agent-stream nil nil nil)))) ; m(...) see note on messages above
 					 (113 (setq rect-aborts? t))))) ; q
 				   ;; step simulation and post updates to agents
 				   (let (disc-pos-x disc-pos-y rect-pos-x rect-pos-y rect-rotation rect-ratio)
-				     (dotimes (i 4)
+				     (dotimes (i 6) ; 6*1/60 ~ 0.1s
 				       (stepworld)
 				       (let ((pose-struct (deref (getDiscPlayerPose))))
 					 (setq disc-pos-x (slot pose-struct 'x)
