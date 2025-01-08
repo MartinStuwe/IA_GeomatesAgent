@@ -5,11 +5,15 @@
 #include "wrapper.h"
 #include <stdlib.h>
 
+#define MAX_CONTACTS 32
+
+
 b2WorldDef gWorldDef;
 b2WorldId gWorldID;
 b2BodyId gDiscPlayer;
 b2BodyId gRectPlayer;
 bodyElem *gBodies;
+b2ContactData gContacts[MAX_CONTACTS];
 float gRectRatio = 4.0f;
 float gRectSize;
 b2ShapeId gRectShapeID;
@@ -126,10 +130,12 @@ int diamondHit(float dx, float dy) {
 // all about game control and simulation
 //
 
+// advances the world by one tick
 void stepWorld(void) {
     b2World_Step(gWorldID, 1.0f / 60.0f, 4);
 }
 
+/*
 // search through list of bodies and return pose of requested body
 // FIXME: linear search is bad
 bodyPose* getPose(unsigned int idx) {
@@ -142,6 +148,7 @@ bodyPose* getPose(unsigned int idx) {
     }
     return &tmpPose; // FIXME: signal error if not found
 }
+*/
 
 bodyPose* getRectPlayerPose(void) {
     tmpPose.position = b2Body_GetPosition(gRectPlayer);
@@ -164,6 +171,8 @@ void moveRectPlayer(float f) {
 }
 
 void transformRectPlayer(float s) {
+    // FIXME: ratio calculation with divide by zero
+    // FIXME: only grow if space permits
     // change aspect ratio
     gRectRatio += s;
     if (gRectRatio < -10.0) gRectRatio = -10;
@@ -173,17 +182,38 @@ void transformRectPlayer(float s) {
     b2Shape_SetPolygon (gRectShapeID, &box);
 }
 
+// returns 1 if body is in contact with another body below, 0 otherwise
+int bodyOnGround(b2BodyId body) {
+    // retrieve contacts of disc
+    int cs = b2Body_GetContactData(body, gContacts, MAX_CONTACTS);
+    // search for contact 'below', i.e., with upward pointing normal
+    for (int i=0; i<cs; i++) {
+        for (int j=0; j<gContacts[i].manifold.pointCount; j++) {
+            if (gContacts[i].manifold.normal.y>0.1) {
+                // contact found
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 void moveDiscPlayer(float f) {
-    b2Vec2 force;
-    force.x = f;
-    force.y = 0.0f;
-    b2Body_ApplyLinearImpulseToCenter(gDiscPlayer, force, 1);
+    // only move if on a ground surface
+    if (bodyOnGround(gDiscPlayer)) {
+        b2Vec2 force;
+        force.x = f;
+        force.y = 0.0f;
+        b2Body_ApplyLinearImpulseToCenter(gDiscPlayer, force, 1);
+    }
 }
 
 void jumpDiscPlayer(float f) {
-    // FIXME: only jump if disc is currently in contact to an object below!!
-    b2Vec2 force;
-    force.x = 0.0f;
-    force.y = f;
-    b2Body_ApplyLinearImpulseToCenter(gDiscPlayer, force, 1);
+    // only jump off a surface below
+    if (bodyOnGround(gDiscPlayer)) {
+        b2Vec2 force;
+        force.x = 0.0f;
+        force.y = f;
+        b2Body_ApplyLinearImpulseToCenter(gDiscPlayer, force, 1);
+    }
 }
