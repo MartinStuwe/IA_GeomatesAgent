@@ -2,7 +2,7 @@
 This is a clone of the 'geometry friends' competition that was run at IJCAI for several years. This 2D physical simulation game is intendend to challenge autonomous agents in a multi-agent setting.
 
 ## Gameplay
-Two players -- disc and rectangle -- jointly need to collect diamonds in a 2d platform envrionment. Players are controlled by one autonomous agent (or human). The disc player has the ability to jump up, while the rectangle can shape its shape by adjusting its height/width ratio. Both players can move left and right and are subject to gravity.
+Two players -- disc and rectangle -- jointly need to collect diamonds in a 2d platform environment. Players are controlled by one autonomous agent (or human). The disc player has the ability to jump up, while the rectangle can shape its shape by adjusting its height/width ratio. Both players can move left and right and are subject to gravity.
 
 ## Principle of Operation
 The game is implemented as a server that connects to agents and the GUI using TCP/IP sockets, sending scene information as s-expressions. The GUI is written in JavaScript and should run in any modern web browser.
@@ -17,10 +17,9 @@ Additionally, [SBCL](https://sbcl.org) as LISP compiler is required. If you have
 Only a single dynamic liberary needs to be build that wraps around box2d's static library. To do so, edit the Makefile to adjust the paths to where box2s include files and the static library can be found (box2d does not need to be installed system-wide).
 
 ## Running the game
-```sbcl --load geomates.lisp --eval "(main)"```
+```sbcl --script geomates.lisp```
 
 Then, open viewer.html in a webbrowser and start your agents. Once both agents have connected, the game starts. It ends when all levels have been played. The list of levels is loaded from levels.lisp.
-
 
 ## Author and License 
 

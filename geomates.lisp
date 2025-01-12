@@ -25,7 +25,7 @@
 ;;; to switch to byte mode first in order to use it.
 ;;;
 ;;; Levels are defined in a global variable *levels* as list of levels. Each level consists out of objects
-;;; given as s-expressions. The coordinate system is x to the right, positive y is up. Unit size is meter.
+;;; given as s-expressions. The coordinate system is x to the right, positive  is up. Unit size is meter.
 ;;; Levels should be 80 x 40 in size to fit the graphical output. 
 ;;; Format and semantics are as follows:
 ;;; (:rect x y) starting position of the rect, the rect player starts with initial width according to +rect-length+ (2m)
@@ -56,23 +56,33 @@
   "port on which the browser GUI connects to the game")
 
 ;;;
-;;; Do not change parameters below 
+;;; Do not change parameters below except for your own experiments
 ;;;
 
 (defparameter +rect-length+ 4.0f0
   "initial width of the rect shape as single float")
-(defparameter +disc-radius+ 1.0f0
+
+(defparameter +rect-force+ 30.0f0
+  "force for moving rect (needs to be adjusted for different rect sizes)")
+
+(defparameter +disc-radius+ 1.5f0
   "radius of the disc shape as single float")
+
+(defparameter +disc-force+ 80.0f0
+  "force for moving disc (needs to be adjusted for different disc sizes)")
+
+(defparameter +announce-who-am-i+ t
+  "whether or not to inform agents which character they are controlling")
 
 (defun initialize-box2d ()
   (sb-alien:load-shared-object *path-to-wrapper-library*))
 
 ;; foreign function interface for linking to box2d wrapper
 ;; functions and types from C library
-(define-alien-type pose (* (struct bodyPose (x float) (y float) (r float) (s float))))
+(define-alien-type pose (* (struct bodyPose (x float) (y float) (r float) (w float) (h float))))
 (define-alien-routine "initWorld" void (gravity-x float) (gravity-y float))
 (define-alien-routine "destroyWorld" void)
-(define-alien-routine "initPlayers" void (rect-x float) (rect-y float) (rect-size float) (rect-density float) (rect-friction float) (disc-x float) (disc-y float) (disc-size float) (disc-density float) (disc-friction float))
+(define-alien-routine "initPlayers" void (rect-x float) (rect-y float) (rect-size float) (rect-ratio float) (rect-density float) (rect-friction float) (disc-x float) (disc-y float) (disc-size float) (disc-density float) (disc-friction float))
 (define-alien-routine "worldInsertPlatform" void (pos-x float) (pos-y float) (size-x float) (size-y float))
 (define-alien-routine "stepWorld" void)
 (define-alien-routine "getRectPlayerPose" pose)
@@ -81,22 +91,26 @@
 (define-alien-routine "jumpDiscPlayer" void (force float))
 (define-alien-routine "moveRectPlayer" void (force float))
 (define-alien-routine "transformRectPlayer" void (dir float))
+(define-alien-routine "pointInRectPlayer" int (x float) (y float))
 
 (defun setup-level (level)
   "sets up the box2d simulation environment for a given level description, returns list of diamonds"
   (let ((disc (assoc :disc level))
 	(rect (assoc :rect level))
 	(platforms (remove-if-not #'(lambda (entry) (eql (first entry) :platform)) level))
-	(diamonds  (remove-if-not #'(lambda (entry) (eql (first entry) :diamond)) level)))
+	(diamonds  (mapcar #'(lambda (d) ; cast to single-floats for box2d 
+			       (list :diamond (coerce (second d) 'float) (coerce (third d) 'float)))
+			   (remove-if-not #'(lambda (entry) (eql (first entry) :diamond)) level))))
     ;; sanity checking
     (unless diamonds
       (error "no diamonds in level"))
     (initworld 0.0f0 -10.0f0)
     (initplayers (coerce (second rect) 'single-float) ; starting position rectangle x/y
 		 (coerce (third rect) 'single-float)
-		 (/ +rect-length+ 4.0f0) ; rectangle size (scaled by 4 in library)
+		 (coerce +rect-length+ 'single-float)
+		 4.0f0 ; ratio
 		 1.0f0 ; density
-		 0.3f0 ; friction
+		 0.1f0 ; friction
 		 (coerce (second disc) 'single-float) ; starting position disc x/y
 		 (coerce (third disc) 'single-float)
 		 +disc-radius+ ; radius
@@ -256,6 +270,7 @@
 ;;
 (defun main ()
   "main loop of game server"
+  (setf *random-state* (make-random-state t))
   (initialize-box2d)
   (start-gui-connection)
   ;; wait for agents
@@ -291,12 +306,21 @@
 			    (rect-listens? nil) ; whether the agent has send some data so it should be ready to listen as well
 			    (disc-listens? nil))
 			(multiple-value-bind (diamonds platforms) (setup-level level)
-			  ;; inform agents which player they control
-			  (format disc-agent-stream "(:playing disc)~a~a" #\Return #\Newline) (finish-output disc-agent-stream)
-			  (format rect-agent-stream "(:playing rect)~a~a" #\Return #\Newline) (finish-output rect-agent-stream)
+			  ;; inform agents which player they control, depending on config
+			  (if +announce-who-am-i+
+			      (progn 
+				(format disc-agent-stream "(:playing disc)~a~a" #\Return #\Newline) 
+				(format rect-agent-stream "(:playing rect)~a~a" #\Return #\Newline) )
+			      (progn
+				(format disc-agent-stream "(:playing unknown)~a~a" #\Return #\Newline)
+				(format rect-agent-stream "(:playing unknown)~a~a" #\Return #\Newline)))
+			  (finish-output disc-agent-stream)
+			  (finish-output rect-agent-stream)
+
+			  ;; ply the level
 			  (loop while (and diamonds (not (and rect-aborts? disc-aborts?)))
 				finally (progn
-					  (format info-stream "level-finished~%")
+					  (format info-stream "level-finished~a~a" #\Return #\Newline)
 					  (finish-output info-stream)
 					  (destroyworld))
 				do
@@ -306,13 +330,12 @@
 				   ;; in case a broken UTF octet sequence will be received (which will be the case in case of being connected
 				   ;; to some telnet that sends telnet protocol stuff
 				   (when (listen disc-agent-stream)
-				     (multiple-value-bind (chr err) (ignore-errors (read-byte disc-agent-stream)) ;(read disc-agent-stream nil nil nil))
-				       (format t "~&received from disc agent: ~a~%" (or chr (format nil "ERROR: ~a" err)))
+				     (let ((chr (ignore-errors (read-byte disc-agent-stream))))
 				       (setq disc-listens? t)
 				       (case chr
 					 (97 (moveDiscPlayer -5.0f0)) ; a
 					 (100 (moveDiscPlayer +5.0f0)) ; d
-					 (119 (jumpDiscPlayer +50.0f0)) ; w
+					 (119 (jumpDiscPlayer +disc-force+)) ; w
 					 ;; messages get appended in order to make sure they will be delivered, not overridded by a newly received one. To this end,  message-from-disc gets reset to NIL after delivery to rect agent further below
 					 (109 (setq message-from-disc (append message-from-disc (read disc-agent-stream nil nil nil)))) ; m(...)
 					 (113 (setq disc-aborts? t))))) ; q
@@ -320,20 +343,21 @@
 				   ;; attend to rect agent
 				   ;(format t "~&rect agent listening: ~a" (listen rect-agent-stream))
 				   (when (listen rect-agent-stream)
-				     (multiple-value-bind (chr err) (ignore-errors (read-byte rect-agent-stream)) ;(read rect-agent-stream nil nil nil))
-				       (format t "~&received from rect agent: ~a~%" (or chr (format nil "ERROR: ~a" err)))
+				     ; we read raw bytes to avoid problems in UTF decoding in case we receive illegal codes
+				     (let ((chr (ignore-errors (read-byte rect-agent-stream))))
 				       (setq rect-listens? t)
 				       (case chr
-					 (97 (moveRectPlayer -5.0f0)) ; a
-					 (100 (moveRectPlayer +5.0f0)) ; d
-					 (115 (transformRectPlayer -0.5f0)) ; s
-					 (119 (transformRectPlayer +0.5f0)) ; w
+					 (97 (moveRectPlayer (- +rect-force+))) ; a
+					 (100 (moveRectPlayer +rect-force+)) ; d
+					 (115 (transformRectPlayer +0.1f0)) ; s
+					 (119 (transformRectPlayer -0.1f0)) ; w
 					 (109 (setq message-from-rect (append message-from-rect (read rect-agent-stream nil nil nil)))) ; m(...) see note on messages above
 					 (113 (setq rect-aborts? t))))) ; q
 				   ;; step simulation and post updates to agents
-				   (let (disc-pos-x disc-pos-y rect-pos-x rect-pos-y rect-rotation rect-ratio)
+				   (let (disc-pos-x disc-pos-y rect-pos-x rect-pos-y rect-rotation rect-width rect-height)
 				     (dotimes (i 6) ; 6*1/60 ~ 0.1s
 				       (stepworld)
+				       ;; read poses from box2d
 				       (let ((pose-struct (deref (getDiscPlayerPose))))
 					 (setq disc-pos-x (slot pose-struct 'x)
 					       disc-pos-y (slot pose-struct 'y)))
@@ -341,7 +365,8 @@
 					 (setq rect-pos-x (slot pose-struct 'x)
 					       rect-pos-y (slot pose-struct 'y)
 					       rect-rotation (slot pose-struct 'r)
-					       rect-ratio (slot pose-struct 's)))
+					       rect-width (slot pose-struct 'w)
+					       rect-height (slot pose-struct 'h)))
 				       ;; check for diamonds taken
 				       (let ((d (find-if #'(lambda (d)
 							     (> 2.0 (abs (- (complex (second d) (third d))
@@ -350,18 +375,17 @@
 					 (when d
 					   (setq diamonds (delete d diamonds))
 					   (incf diamonds-disc)))
-				       (let ((d (find-if #'(lambda (d) ;; FIXME: form des rechtecks beachten!
-							     (> 2.0 (abs (- (complex (second d) (third d))
-									    (complex rect-pos-x rect-pos-y)))))
+				       (let ((d (find-if #'(lambda (d)
+							     (< 0 (pointInRectPlayer (second d) (third d))))
 							 diamonds)))
 					 (when d
 					   (setq diamonds (delete d diamonds))
 					   (incf diamonds-rect))))
-
+				     
 				     ;; send current scene to anyone listening
 				     (let* ((*print-pretty* nil)
 					    (current-scene (format nil "((:RECT ~,2f ~,2f ~,2f ~,2f ~,4f ~d)(:DISC ~,2f ~,2f ~,2f ~d)~a~a~{~w~}~{~w~})"
-								  rect-pos-x rect-pos-y (* +rect-length+ rect-ratio) (/ +rect-length+ rect-ratio) rect-rotation diamonds-rect
+								  rect-pos-x rect-pos-y rect-width rect-height rect-rotation diamonds-rect
 								  disc-pos-x disc-pos-y +disc-radius+ diamonds-disc
 								  (if message-from-disc
 								      (list :msg->rect message-from-disc)
@@ -392,3 +416,6 @@
 	(close rect-agent-stream)
 	(setq *gui-running?* nil) ; set flag of GUI server to exit
 	:done))))
+
+(eval-when (:execute :load-toplevel)
+  (main))
