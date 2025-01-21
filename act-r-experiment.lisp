@@ -8,11 +8,33 @@
 #-SBCL (eval-when (:compile :load-toplevel)
 	 (error "Sorry, this experiment requires ACT-R based on the SBCL compiler; install SBCL and load ACT-R"))
 
+#+SBCL (eval-when (:compile :load-toplevel)
+	 (require :sb-bsd-sockets))
+
 (defvar *socket* nil
   "TCP/IP socket for talking to the game")
 
 (defvar *gstream* nil
   "stream for interfacing the game which uses *socket* for communication")
+
+(defparameter *geomates-host* #(127 0 0 1)
+  "host on which the game server is running")
+(defparameter *geomates-port* 45678
+  "TCP port on which the game server is listening for agent connections")
+
+(defun ensure-connection ()
+  "(re)establishes the socket connection to the server"
+  (unless (open-stream-p *gstream*)
+    (unless *socket*
+      (setf *socket* (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)
+	    (sb-bsd-sockets:sockopt-tcp-nodelay *socket*)   t
+	    (sb-bsd-sockets:sockopt-reuse-address *socket*) t))
+    (sb-bsd-sockets:socket-bind *socket* *geomates-host* *geomates-port*)
+    (sb-bsd-sockets:socket-connect *socket*)
+    (setf *gstream* (sb-bsd-sockets:socket-make-stream *socket* :input t :output t :element-type :default))))
+
+
+
 
 ;; function to be called by ACT-R to handle key presses by the model
 ;; keypress is send to gameserver and updated scene is read back and inserted into visicon
