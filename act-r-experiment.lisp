@@ -8,7 +8,7 @@
 #-SBCL (eval-when (:compile :load-toplevel)
 	 (error "Sorry, this experiment requires ACT-R based on the SBCL compiler; install SBCL and load ACT-R"))
 
-#+SBCL (eval-when (:compile :load-toplevel)
+#+SBCL (eval-when (:compile-toplevel :load-toplevel)
 	 (require :sb-bsd-sockets))
 
 (defvar *socket* nil
