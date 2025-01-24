@@ -356,7 +356,7 @@
 				   ;; step simulation and post updates to agents
 				   (let (disc-pos-x disc-pos-y rect-pos-x rect-pos-y rect-rotation rect-width rect-height)
 				     (dotimes (i 6) ; 6*1/60 ~ 0.1s
-				       (stepworld)
+				       (ignore-errors (stepworld)) ; tmp fix for box2d crashes
 				       ;; read poses from box2d
 				       (let ((pose-struct (deref (getDiscPlayerPose))))
 					 (setq disc-pos-x (slot pose-struct 'x)
