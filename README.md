@@ -11,9 +11,19 @@ The game is implemented as a server that connects to agents and the GUI using TC
 For convenience of testing, you can connect to the server by telnet to control an agent. See documentation inside geomates.lisp for all the glory details.
 
 ## Requirements
-The game requires a 3.0 version of the box2d library to be installed. As of 2025, 2.x versions are still widely shipped with package management systems. This are incompatible with 3.x versions and will not work! Therefore, [download the original](https://github.com/erincatto/box2d) repository and build the library yourself. 
+The game requires a 3.0 version of the box2d library to be installed. As of 2025, 2.x versions are still widely shipped with package management systems. This are incompatible with 3.x versions and will not work! Therefore, [download the original](https://github.com/erincatto/box2d) repository and build the library yourself.
 
 Additionally, [SBCL](https://sbcl.org) as LISP compiler is required. If you have ACT-R installed, you probably already have SBCL.
+
+### Windows
+You may experience issues compiling box2d and need to use linux virtualization.
+Download [Docker](https://www.docker.com) and use the provided Dockerfile to run the game environment by <pre><code>docker run -p 8000:8000 -p 45678:45678 geomates:latest sbcl --script geomates.lisp</code></pre>. Note that you cannot provide own levels or change game parameters.
+
+### Linux
+Just follow the instructions for building below. In case you don't have clang installed, change the compiler to gcc in the Makefile.
+
+### MacOS
+Just follow the instructions for building below. Make sure to have developer tools installed. You can install telnet using [homebrew](https://brew.sh): <pre><code>brew install telnet</code></pre>
 
 ## Building
 Only a single dynamic liberary needs to be build that wraps around box2d's static library. To do so, edit the Makefile to adjust the paths to where box2s include files and the static library can be found (box2d does not need to be installed system-wide).
