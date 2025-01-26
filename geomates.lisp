@@ -40,7 +40,7 @@
   (load "base64.lisp")
   (load "sha1.lisp")
   (load "levels.lisp")
-  ; (require :sb-alien) ;; not needed in modern SBCL (uncomment only if sb-alien module is unknown)
+  ;; (require :sb-alien) ;; not needed in modern SBCL (uncomment only if sb-alien module is unknown)
   (require :sb-bsd-sockets)  ;; for networking
   (require :sb-concurrency)) ;; for lock-free threadsafe queues
 
@@ -273,7 +273,8 @@
   (setf *random-state* (make-random-state t))
   (initialize-box2d)
   (start-gui-connection)
-  ;; wait for agents
+
+  ;; wait for agents to connect
   (let ((port *agent-port*)
 	(diamonds-disc 0)
 	(diamonds-rect 0))
@@ -281,12 +282,14 @@
     (let* (disc-agent-stream rect-agent-stream info-stream)
       (unwind-protect
 	   (multiple-value-bind (tcp-stream-1 tcp-stream-2 agent-socket) (await-agent-connections port) ; wait until agents have connected 
-	     (when (= 1 (random 2)) ; randomly assign disc and rect player
+	     ;; randomly assign disc and rect player
+	     (when (= 1 (random 2)) 
 	       (rotatef tcp-stream-1 tcp-stream-2))
 	     (setq disc-agent-stream tcp-stream-1
 		   rect-agent-stream tcp-stream-2
 		   info-stream (make-broadcast-stream disc-agent-stream rect-agent-stream *standard-output*))
-	     
+
+	     ;; play all levels
 	     (loop for level in *levels*
 		   finally (progn (format info-stream "end~%")
 				  (finish-output info-stream)
@@ -419,4 +422,3 @@
 
 (eval-when (:execute :load-toplevel)
   (main))
-
