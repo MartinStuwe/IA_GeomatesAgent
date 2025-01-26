@@ -2,16 +2,20 @@
 This is a clone of the 'geometry friends' competition that was run at IJCAI for several years. This 2D physical simulation game is intended to challenge autonomous agents in a multi-agent setting.
 
 ## Gameplay
-Two players -- disc and rectangle -- jointly need to collect diamonds in a 2d platform environment. Players are controlled by one autonomous agent (or human). The disc player has the ability to jump up, while the rectangle can shape its shape by adjusting its height/width ratio. Both players can move left and right and are subject to gravity.
+Two players -- disc and rectangle -- jointly need to collect diamonds in a 2d platform environment. Players are controlled by one autonomous agent (or human). The disc player has the ability to jump up, while the rectangle can shape its shape by adjusting its height/width ratio. Both players can move left and right and are subject to gravity. Additionally, agents can send messages to the other agents (see below).
 
 Levels are defined in levels.lisp, see there for how to design your own levels.
 
-## Principle of Operation
+## Principle of Operation and Control
 The game is implemented as a server that connects to agents and the GUI using TCP/IP sockets, sending scene information as s-expressions. The GUI is written in JavaScript and should run in any modern web browser.
 For convenience of testing, you can connect to the server by telnet to control an agent. See documentation inside geomates.lisp for all the glory details.
 
+Agents are controlled via key codes for a (left), d (right), w (jump, disc only), s (widen shape, rect only), w (grow shape, rect only). Additionally, m(...) can be used to send a message (...) which must be a valid s-expression (i.e., matching paranthesis) to the other agent. See the comments in geomates.lisp for all the glory details.
+
+To make the game controllable by Telnet, telnet has to be switched into byte mode such that keypresses are send immediately. The game server will do so automatically, causing some protocol traffic the gameserver will however treat as control attempts. This is why telnet clients will receive lots of responses, although no key has been pressed.  
+
 ## Requirements
-The game requires a 3.0 version of the box2d library to be installed. As of 2025, 2.x versions are still widely shipped with package management systems. This are incompatible with 3.x versions and will not work! Therefore, [download the original](https://github.com/erincatto/box2d) repository and build the library yourself.
+The game requires a 3.x version of the box2d library to be installed. As of 2025, 2.x versions are still widely shipped with package management systems. These are incompatible with 3.x versions and will not work! Therefore, [download the original](https://github.com/erincatto/box2d) repository and build the library yourself. In case your package manager provides a 3.x library, you may of course use that.
 
 Additionally, [SBCL](https://sbcl.org) as LISP compiler is required. If you have ACT-R installed, you probably already have SBCL.
 
