@@ -27,6 +27,13 @@
 	 (with-output-to-string (result) ; temporary string output stream
 	   (run-program (probe-file "/bin/ls") (list "/") :output result))))
 
+;;; In case you need to differentiate different environments/OS/compilers:
+;;; have a look at Common-Lisps reader macros #+/#- (like #ifdef in C),
+;;; which refer to the global variable *features*
+;;; examples:
+;;; #+SBCL (print "I'm running the SBCL compiler")
+;;; (defparameter *magic-code* #+LITTLE-ENDIAN #x0f12 #-LITTLE-ENDIAN 0x120f)
+
 
 ;;;
 ;;; Now comes the core Act-R agent
