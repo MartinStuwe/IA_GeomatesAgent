@@ -54,6 +54,9 @@ RUN cd geomates && \
 # HOTFIX 2:
 RUN sed -i  's/#(127 0 0 1)/#(0 0 0 0)/g' /usr/src/app/geomates/geomates.lisp
 
+# HOTFIX 3:
+CMD ["sh", "-c", "cd /usr/src/app/geomates && git pull“]
+
 EXPOSE 8000
 
 WORKDIR /usr/src/app/geomates
