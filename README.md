@@ -19,9 +19,15 @@ The game requires a 3.x version of the box2d library to be installed. As of 2025
 
 Additionally, [SBCL](https://sbcl.org) as LISP compiler is required. If you have ACT-R installed, you probably already have SBCL.
 
-### Windows
-You may experience issues compiling box2d and need to use linux virtualization.
-Download [Docker](https://www.docker.com) and use the provided Dockerfile to run the game environment by <pre><code>docker run -p 8000:8000 -p 45678:45678 geomates:latest sbcl --script geomates.lisp</code></pre>. Note that you cannot provide own levels or change game parameters.
+Alternatively, you may use the provided Dockerfile to run the game in a virtual environment (tested only on machines with x86 processor).
+
+### Docker
+Download [Docker](https://www.docker.com) and use the provided Dockerfile to build the game environment by <pre><code>docker build -t geomates:latest .</code></pre> (this may take a while, but is only required once). Then use <pre><code>docker run -p 8000:8000 -p 45678:45678 geomates:latest sbcl --script geomates.lisp</code></pre> to run the game. Note that you cannot provide own levels or change game parameters unless you modify the Docker container.
+
+### Windows using MSVC
+Follow the instructions for building below but use the Windows specific Makefile provided for building the library (thanks, Jendrik!). Note that you must adopt the path names inside the Makefile!
+
+Note that Telnet is usually shipped with Windows, but it requires extra steps to activate it.
 
 ### Linux
 Just follow the instructions for building below. In case you don't have clang installed, change the compiler to gcc in the Makefile.
@@ -39,4 +45,4 @@ Then, open viewer.html in a web browser and start your agents. Once both agents 
 
 ## Author and License 
 
-The game is distributed as open source software as is. Author is Diedrich Wolter, address all requests to him. Geomates employs two Lisp packages provided under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) for open source software: [base64](https://github.com/massung/base64) and [sha1](https://github.com/massung/sha1).
+The game is distributed as open source software as is. Author is Diedrich Wolter, address all requests to him. Geomates uses two Lisp packages provided under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) for open source software: [base64](https://github.com/massung/base64) and [sha1](https://github.com/massung/sha1).
