@@ -36,12 +36,11 @@ RUN apt-get update && \
     build-essential \
     wget 
 
-# Ugly: 
-RUN wget https://github.com/erincatto/box2d/archive/refs/tags/v3.0.0.tar.gz
-RUN tar -xzvf v3.0.0.tar.gz
+ 
+RUN git clone https://github.com/erincatto/box2d.git
 # HOTFIX 1: Fix the CMakeLists.txt file to not build the samples
-RUN sed -i 's/option(BOX2D_SAMPLES "Build the Box2D samples" ON)/option(BOX2D_SAMPLES "Build the Box2D samples" OFF)/g' /usr/src/app/box2d-3.0.0/CMakeLists.txt
-RUN cd  /usr/src/app/box2d-3.0.0 && \
+RUN sed -i 's/option(BOX2D_SAMPLES "Build the Box2D samples" ON)/option(BOX2D_SAMPLES "Build the Box2D samples" OFF)/g' /usr/src/app/box2d/CMakeLists.txt
+RUN cd  /usr/src/app/box2d && \
     ./build.sh
 
 
@@ -49,13 +48,12 @@ RUN apt install -y sbcl clang
     
 RUN git clone https://gitlab.isp.uni-luebeck.de/hai/geomates.git
 RUN cd geomates && \
-    clang -I ../box2d-3.0.0/include -pedantic -Wall -fPIC -shared -Wl,--no-undefined -lm -o wrapper.so wrapper.c ../box2d-3.0.0/build/src/libbox2d.a
+    clang -I ../box2d/include -g -pedantic -Wall -fPIC -shared -Wl,--no-undefined -lm -o wrapper.so wrapper.c ../box2d/build/src/libbox2d.a
 
+
+    #clang -I ../box2d/include -g -pedantic -Wall -fPIC -shared -Wl,--no-undefined -lm -o wrapper.so wrapper.c ../box2d/build/src/libbox2d.a
 # HOTFIX 2:
 RUN sed -i  's/#(127 0 0 1)/#(0 0 0 0)/g' /usr/src/app/geomates/geomates.lisp
-
-# HOTFIX 3:
-CMD ["sh", "-c", "cd /usr/src/app/geomates && git pull“]
 
 EXPOSE 8000
 
