@@ -58,3 +58,4 @@ RUN sed -i  's/#(127 0 0 1)/#(0 0 0 0)/g' /usr/src/app/geomates/geomates.lisp
 EXPOSE 8000
 
 WORKDIR /usr/src/app/geomates
+
