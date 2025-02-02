@@ -58,12 +58,13 @@ We expect our agent to perform particularly well in levels where It is important
 \section{Organization}
 
 The Project can be split up in different work packets that can be worked on individually.
+Ideas that emerged during discussions in the group are captured here. This causes different grades of detail for the different topics.
 
 \subsection{Software Architecture}
 To make the different components of the system work together, a software architecture and a framework defining the structure and communication of the application and the different components has to be defined. 
 The logic and behaviour of the different components will then be added in this framework. 
 The goal of this work package is a working python framework with callbacks for communication between the modules and defined interfaces. 
-It will also include Communication with the simulation via the World connector. The person responsible for this task is Jendrik Stoltz. 
+It will also include Communication with the simulation via the World connector.
 As integration of the other functionality depends on this task, it has to be worked on early on.
 
 \subsection{Self Localisation}
@@ -71,7 +72,7 @@ To find out which object our model controls, a "W" command is sent to the game, 
 
 \subsection{Low Level Control}
 The goal of this work package is the creation of a library of atomic actions for the square and rectangle with the required P(I)D controllers. It will also include a plan executor that will run an action sequence and check for success or fail.
-A draft of preconditions and effects of the atomic actions for later use in the planner is also included. The person responsible for this task is Jendrik Stoltz.
+A draft of preconditions and effects of the atomic actions for later use in the planner is also included.
 
 \subsection{Connect Planner to World and Actions}
 % Martin, Mohammad
@@ -168,7 +169,13 @@ By combining a robust, remote LLM setup with a carefully designed prompt, our sy
 
 
 \subsection{Evaluation}
-First evaluation metric would be if agents successfully able to finish the level with collecting all diamonds by itself or by collaborating with other agents. Another metric could be how long it takes to complete a level. The aim is to reduce the time required to complete a level with faster learning and decision-making skills. Token efficiency is another criterion. At this point, an examination can be made regarding the simplicity and adequacy of the prompts sent to LMM. We plan to obtain sufficient output with fewer and simpler prompts. Although our current plan does not include an active communication system for cooperation with other agents, we hope to indirectly achieve cooperation by detecting the locations of other objects and their previous movements and making an inference, thus completing the level.
+First evaluation metric would be the number of diamonds captured by the agent itself or by collaborating with other agents in scenarios where the other agent offers help.
+To simulate a cooperating agent we can take manual control of the other player.
+Although our current plan does not include an active communication system for cooperation with other agents, we hope to indirectly achieve cooperation by detecting the locations of other objects and their previous movements and making an inference, thus completing the level.
+Another metric could be how long it takes to complete a level. The aim is to reduce the time required to complete a level with experience when keeping the llm history intact and enable in context learning over levels to improve decision-making skills. 
+Token efficiency is another criterion. At this point, an examination can be made regarding the simplicity and adequacy of the prompts sent to LMM. 
+We plan to obtain sufficient output with fewer and simpler prompts. 
+
 
 \subsection{Deployment}
 The Goal of this work package is the creation of the final deliverable, a fully working docker container containing the agent. 
