@@ -73,11 +73,99 @@ To find out which object our model controls, a "W" command is sent to the game, 
 The goal of this work package is the creation of a library of atomic actions for the square and rectangle with the required P(I)D controllers. It will also include a plan executor that will run an action sequence and check for success or fail.
 A draft of preconditions and effects of the atomic actions for later use in the planner is also included. The person responsible for this task is Jendrik Stoltz.
 
-\subsection{Connect planner to world and actions}
-Martin, Mohammad
+\subsection{Connect Planner to World and Actions}
+% Martin, Mohammad
 
-\subsection{LLM Setup and Prompt design}
-Martin, Mohammad
+The goal of this work package is to ensure that the high-level planning module (PDDL planner) is effectively connected to the actual actions executed in the game world. This integration is crucial for translating abstract subgoals into concrete, atomic actions performed by the agent. The connection is implemented through the following process:
+
+\begin{enumerate}
+    \item \textbf{Plan Generation:}  
+    Once the LLM selects a subgoal, the PDDL planner is invoked to generate a sequence of atomic actions that lead toward that subgoal. Each atomic action is defined with:
+    \begin{itemize}
+        \item A description containing its \emph{preconditions} and \emph{effects}.
+        \item A corresponding callback function that invokes a PID controller to execute the movement or operation.
+    \end{itemize}
+    
+    \item \textbf{Action Execution:}  
+    The generated plan is handed off to the Low-Level Controller, which sequentially executes each atomic action. The controller uses the world connector to send commands (via Telnet) to the game environment.
+    
+    \item \textbf{World State Monitoring:}  
+    Throughout execution, the world connector continuously receives updated world state information. This monitoring enables the system to verify if:
+    \begin{itemize}
+        \item The preconditions for the next action are still met.
+        \item The executed action produced the intended effects.
+        \item External events (e.g., interference from the other agent, disappearance of critical objects) necessitate plan revision.
+    \end{itemize}
+    
+    \item \textbf{Feedback and Re-planning:}  
+    If an atomic action fails or if the current world state invalidates the plan (for instance, due to unexpected interference), the Low-Level Controller interrupts the ongoing plan execution. A detailed report, including the failure mode and current world context, is sent back to the LLM. The LLM can then use this feedback to choose a new subgoal, and the planning process starts anew.
+    
+    \item \textbf{Error Handling and Robustness:}  
+    Robust error-handling mechanisms are in place to address discrepancies between the expected and actual world states. This includes:
+    \begin{itemize}
+        \item Logging all atomic action outcomes.
+        \item Dynamically adjusting action parameters via PID controllers.
+        \item Initiating recovery procedures when critical failures are detected.
+    \end{itemize}
+\end{enumerate}
+
+This tight integration of planning, execution, and feedback ensures that the deterministic strengths of the PDDL planner are leveraged while still allowing real-time adjustments based on dynamic game conditions.
+
+\subsection{LLM Setup and Prompt Design}
+% Martin, Mohammad
+
+Since the agent runs on hardware with limited GPU resources, we rely on a remote API for the LLM. The chosen provider (e.g., Google Gemini) is expected to meet our usage constraints—less than 15 requests per minute (RPM), fewer than 1 million tokens per minute (TPM), and under 1,500 requests per day (RPD).
+
+\textbf{API Setup:}
+\begin{itemize}
+    \item \textbf{Provider Selection:}  
+    The LLM is accessed through a remote API, ensuring that our agent can perform advanced reasoning without requiring local GPU resources.
+    
+    \item \textbf{Connection and Authentication:}  
+    Secure connections are established to the API endpoint, with proper authentication protocols in place. Rate limiting and error-handling procedures are also implemented to handle potential network issues or API downtimes.
+    
+    \item \textbf{Scalability Considerations:}  
+    Given our relatively low usage expectations, the API configuration is optimized to maintain low latency while ensuring that each prompt-response cycle is efficient.
+\end{itemize}
+
+\textbf{Prompt Design:}
+\begin{itemize}
+    \item \textbf{Compact World Representation:}  
+    The prompt is designed to provide the LLM with a concise yet informative snapshot of the current game state. This includes:
+    \begin{itemize}
+        \item The agent’s current position and status.
+        \item The state and location of nearby objects (e.g., diamonds, traps).
+        \item Observations regarding the other agent’s behavior.
+        \item A summary of the recent action history and outcomes.
+    \end{itemize}
+    
+    \item \textbf{Clear Instruction for Subgoal Selection:}  
+    The prompt explicitly instructs the LLM to analyze the current state and propose a new subgoal. The instruction emphasizes criteria such as avoiding conflict with the other agent and selecting a subgoal that is viable given the current environmental conditions.
+    
+    \item \textbf{Dynamic Context Injection:}  
+    A prompt template is used, wherein placeholders are dynamically populated with the latest world state and history data before sending the request. This helps the LLM leverage its in-context learning capabilities and develop a rudimentary theory of mind regarding the other agent.
+    
+    \item \textbf{Token Efficiency:}  
+    To meet API limitations and ensure fast response times, the prompt is optimized to include only essential details.
+\end{itemize}
+
+A sample prompt template might look like this:
+
+\begin{verbatim}
+[World State]
+- Agent Position: (x, y)
+- Nearby Objects: [list with positions and statuses]
+- Other Agent Observations: [brief summary of movements/actions]
+- Recent Action History: [actions and outcomes]
+
+Task: Based on the above state, determine the next viable subgoal that advances our overall objective while minimizing interference with the other agent.
+\end{verbatim}
+
+Once the prompt is sent to the LLM, the response is parsed to extract the recommended subgoal. This subgoal is then forwarded to the PDDL planner for generating the corresponding sequence of atomic actions, thereby closing the loop between high-level reasoning and low-level execution.
+
+By combining a robust, remote LLM setup with a carefully designed prompt, our system leverages the flexible reasoning capabilities of the LLM while maintaining deterministic control through grounded planning.
+
+
 
 \subsection{Evaluation}
 Ali
