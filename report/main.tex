@@ -13,7 +13,7 @@
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
-\title{Exposé Intelligent Agents Geomates Practicals}
+\title{Concept Intelligent Agents Geomates Practicals}
 \author{Ali Baran Oez, Mohammad Ghassan Aburas, Martin Stuwe, Jendrik Stoltz}
 
 \begin{document}
@@ -21,20 +21,41 @@
 
 \section{Main Idea}
 
-The main Idea of our agent is the combination of planning systems and a Large Language Model on different levels of control of the agent. 
-With the capability of LLMs of handling loosely defined tasks, the LLM gets tasked to find subgoals / critical points in the level and select one of them as the first goal. As communication is hard with unknown agents in the level,  the Theory of Mind capabilities of LLMs discussed in the lecture are expected to select actions that fit to what the other agent might do in the situation. 
+The main Idea of our agent is the combination of planning systems and a Large Language Model (LLM) on different levels of control of the agent. 
+With the capability of LLMs of handling loosely defined tasks, the LLM gets tasked to find sub-goals / critical points in the level and select one of them as the first goal. As communication is hard with unknown agents in the level,  the Theory of Mind capabilities of LLMs discussed in the lecture are expected to select actions that fit to what the other agent might do in the situation. 
+In the proposed agent, the LLM acts as a black box learning element receiving a world description and returning a high level goal. We hope that the various types of background knowledge encoded in the weights in combination with in context learning will make the LLM propose sub-goals based on expected and observed behaviour of the other human or autonomous player and structure of the level.
 
-Planning Systems on the other hand offer deterministic results and do not have the hallucination problem of LLMs in complex reasoning tasks ensuring correct plans for reaching goals. Planning systems also have a lower answer latency and are much lighter on resources. 
+Planning Systems on the other hand offer deterministic results and do not have the hallucination problem of LLMs in complex reasoning tasks ensuring correct plans for reaching goals. Planning systems also have a lower answer latency and are much lighter on resources than the inference of large neural networks. 
 
-In our System the LLM therefore only selects subgoals (Lifted Planning) and a PDDL Planner finds a sequence of atomic actions that lead to the subgoal (Grounded Planning). A success or Fail of the plan as well as critical changes in the world affecting the goal are reported to the LLM to react / choose the next subgoal.
+\section{Self Localization}
 
-\section{Self Localisation}
+To select a possible set of actions for the used planning system and give the LLM a suitable task description, the agent has to learn wether it controls the ball or the rectangle first. Our self localization approach is inspired by the sense of control concept introduced in the perception in agents lecture. 
+In the geometry friends game, the effect of key presses on the two different player types is defined in the task description.
+Our agent will choose a random control key, and press it and observe the change on environment. 
+To detect the change, a simple model of position and velocity of the two players is used. 
+The actions and expected changes are organized as pairs for each of the different agent types.
+To reduce the chance of the other player choosing the same action for their self localization procedure, the process is repeated multiple times (e.G. 8 times) like described in the pseudo code below. To determine the player type, the type with the higher sense of control is chosen. After determining the player type, the actual agent control code is started.
 
-The self localisation of the agent gets handled by a startup routine that gets executed before giving control to the actual agent code. To find out if the ball or the rectangle are controlled, a "W" command gets send to the game after a wait period derived from the PID of the process. If the ball position changes on the y axis, the agent controls the ball, if the shape of the rectangle changes the agent controls the rectangle. If both changes are observed, the process gets repeated after a random wait interval. When the agent type is determined, control is given to the agent logic.
+\begin{verbatim}
+rect_soc = 0
+disc_soc = 0
+world_state_old = get_world_state()
+
+repeat n times:
+    key = select_random([W,A,S,D])
+    exp_effect_rect = get_exp_effect(key, 'rect')
+    exp_effect_disc = get_exp_effect(key, 'disc')
+    press(key)
+    world_state = get_world_state()
+    rect_soc += check_effect(exp_effect_rect, world_state_old, world_state)
+    disc_soc += check_effect(exp_effect_disc, world_state_old, world_state)
+    world_state_old = world_state
+
+\end{verbatim}
 
 \section{Agent Structure}
 
-In \ref{fig:architecture} an overview of our agent structure is given. The Agent interacts with the world through a world connector that handles Telnet communication with the game. It takes WASD contol from the Low Level Controller and provides the current world description to the modules of the agent. The Low Level Controller executes a plan of atomar actions the agent can do. Each atomar action consists of a PID controller callback for executing the action, an action description for the PDDL planner containing preconditions and effects as well as state flags indicating a success or fail. The low level controller also checks if something in the world affects a future part of the plan (e.g. other agent in the way, goal diamond gone, atomar action failed) and stops plan execution then. Success and fail of a plan are reported to the LLM with the current world state to find a new subgoal based on the new state.
+In \ref{fig:architecture} an overview of our agent structure is given. The Agent interacts with the world through a world connector that handles Telnet communication with the game. It takes WASD control from the Low Level Controller and provides the current world description to the modules of the agent. The Low Level Controller executes a plan of atomar actions the agent can do. Each atomar action consists of a callback for executing the action, an action description for the planner module containing preconditions and effects as well as state flags indicating a success or fail. The low level controller also checks if something in the world affects a future part of the plan (e. G other agent in the way, goal diamond gone, atomar action failed) and stops plan execution then. Success and fail of a plan are reported to the LLM with the current world state and sequence of executed actions to find a new sub-goal based on the new state.
 \begin{figure}[h]
 \caption{Architectural Overview}
 \label{fig:architecture}
@@ -42,18 +63,38 @@ In \ref{fig:architecture} an overview of our agent structure is given. The Agent
 \includegraphics[width=0.7\textwidth]{graphic/IA_llm_agent.pdf}
 \end{figure}
 
+\section{Multi-Level planning with LLMs and traditional planning systems}
+
+As inference on modern LLMs in computationally heavy and therefore causes high reaction latency to world changes, we task the LLM to find a sub-goal suitable to pursue in the current situation and a traditional planning system finds a sequence of atomic actions that lead to the sub-goal from the current situation. The LLM therefore acts similar to lifted online planning while the planner outputs a complete action sequence for reaching the next sub-goal, acting as a grounded planner. A success or fail of the plan as well as the executed actions and new world state are reported to the LLM by including them in the next prompt. The effect of selecting the last goal and the steps that where used in an attempt to reach it are therefore present in the input data and can be considered when choosing the next sub-goal.
+
+\section{Low level planning with traditional planner}
+
+To prepare the world description retrieved from the world connector for usage with a planner, it has to be converted to a discrete state space. Like in exercise 12 of the practicals, a rasterization is applied to model the planning problem in PDDL and use an automated planner. A domain file is created from the actions available for the current player type and their preconditions and effects. A problem file is created from the rasterized world description and the goal set by the LLM. The generated PPDL files are then fed to a planning system that delivers an action chain for the low level controller.
+
 \section{Learning through LLM in-context learning}
 
-Requests to the LLM for planning the next tasks are accompanied by a history of actions and their effect. This information can therefore be used to adapt to past behavior of the other agent and success of plans. If the history gets not resetted between levels we hope that the LLM gets better at developing a theory of mind of the other agent and get a better "feeling" of the viability of goals.
+% TODO Martin, Mohammad
+As already briefly explained in the general agent concept, a state of the art large language model is used as a versatile learning element to ...  TODO to complete with the details that are currently in the organisation section
 
 \section{Collaboration}
 
-On its own, our agent will only select diamonds as goals and do not offer cooperation. The other player will however be considered in Planning and will be reported to the LLM. If the position of another agent gets considered useful for collecting a goal it can get used. For future development however specific predefined helpful situations could be identified and be proposed to the LLM
+For complex collaboration with a shared plan with joint actions, a predefined communication interface would be needed. 
+Only by communication of abilities and intention a common ground for strong collaboration could be found. 
+Because of the scoring system the players are also in mild competition with each other, requiring negotiation over a communication interface to reach a common ground for a joint plan.  
+As such an interface is not available, our agent has to rely on hints and creating a theory of mind model of the other agent. 
+On its own, our agent will only select diamonds as goals and do not offer cooperation. The other player will however be considered in Planning and will be reported to the LLM. If the position of another agent gets considered useful for collecting a goal it can get used. As the sequence and history of perceptions of the other agent is also included in the prompt, we hope that the LLM will learn a model of the behaviour of the other agent by exploiting the theory of mind abilities of LLMs discussed in the lecture.
 
 \section{Agent Evaluation}
 
-We plan to evaluate our agent in levels containing 
-We expect our agent to perform particularly well in levels where It is important to collect diamonds that are not targeted by the other agent like diamonds that are hard to reach and far away for the controlled player but easy to reach and close for the other player. Also cooperation with an agent that offers help (simulated by manual control) could work well. We see problems in Levels containing traps and unrecoverable states as the LLM may have problems understanding the game physics.
+To evaluate the implementation of our concept a series of experiments is conducted.
+The first is the ability of the agent to deal with a new situation based only on the background knowledge provided by the prompt and LLM. For this a clean run (with new LLM chat) in levels of different complexity is conducted.
+Possible levels are flat platforms with easily reachable diamonds as simple levels and levels with unrecoverable falls and unreachable diamonds on hard levels. 
+
+To introduce a measure for the performance, the overall score of the controlled player is evaluated for the different levels.
+Higher scores indicate a better understanding of the structure of the level, own abilities and other agent behaviour.
+Also the number of required re-plannings while reaching a goal is measured. High values here indicate uncertainty in world and other player understanding. A re-planning occurs in a goal set by the LLM is not reachable or the execution of a plan gets interrupted by an execution failure (e. G. dropping in an undesired unrecoverable state) or a change of an object in the world that is part of the plan (e. G. target diamond gets collected).
+
+To evaluate the learning ability of our agent we pick levels that our agent struggled with in the first try. Struggling is indicated by a low score and/or a high number of re-plannings. By letting the agent play the level with the knowledge about past goals and plan failures in the history and tracking the score and number of re-plannings over the rounds we evaluate the learning ability of our concept.
 
 \section{Organization}
 
@@ -67,53 +108,24 @@ The goal of this work package is a working python framework with callbacks for c
 It will also include Communication with the simulation via the World connector.
 As integration of the other functionality depends on this task, it has to be worked on early on.
 
-\subsection{Self Localisation}
-To find out which object our model controls, a "W" command is sent to the game, from the world definition we can detect the change in the Y-axis for the circle or the change in the height for the rectangle. Depending on the change, we can evaluate which object is controlled by our agent. To do this, first, the initial positions and dimensions of the rectangle and circle objects are determined and after waiting for a while after the command, it can be checked whether there is a change. If there is no change for either object after the command, the "A" or "D" command can be sent and the change in the X-axis can be checked. This can be useful in cases where there is a movement restriction at the beginning in some sections. The reason why the "W" command was used instead of the "A" or "D" command at the beginning was chosen to prevent objects from falling by considering that they can spawn on a platform in certain levels. At this point, considering that the other model may also start to localize itself with a similar method, it may be appropriate to choose a more distinctive movement combination. For this reason, by sending the "W" command 3 times in a row, the number of Y position changes for the circle or the number of length changes for the rectangle can be followed.
+\subsection{Self Localization}
+
+This work package includes the implementation of the self localization mechanism described the agent description above. As the game application currently delivers information about the controlled player to the agent and the self localization module is independent from the main agent code this task can be worked on in the later development process or can be implemented in parallel to the other tasks. 
 
 \subsection{Low Level Control}
-The goal of this work package is the creation of a library of atomic actions for the square and rectangle with the required P(I)D controllers. It will also include a plan executor that will run an action sequence and check for success or fail.
-A draft of preconditions and effects of the atomic actions for later use in the planner is also included.
+The goal of this work package is the creation of a library of atomic actions for the disc and rectangle player. 
+As the physics parameters of the game are not known, the actions will be implemented in a approximate way and return if the post-condition is met with a margin of error. 
+It will also include a plan executor that will run an action sequence and check for success or fail.
+A draft of preconditions and effects of the atomic actions for later use in the planning system is also included.
 
 \subsection{Connect Planner to World and Actions}
-% Martin, Mohammad
 
-The goal of this work package is to ensure that the high-level planning module (PDDL planner) is effectively connected to the actual actions executed in the game world. This integration is crucial for translating abstract subgoals into concrete, atomic actions performed by the agent. The connection is implemented through the following process:
-
-\begin{enumerate}
-    \item \textbf{Plan Generation:}  
-    Once the LLM selects a subgoal, the PDDL planner is invoked to generate a sequence of atomic actions that lead toward that subgoal. Each atomic action is defined with:
-    \begin{itemize}
-        \item A description containing its \emph{preconditions} and \emph{effects}.
-        \item A corresponding callback function that invokes a PID controller to execute the movement or operation.
-    \end{itemize}
-    
-    \item \textbf{Action Execution:}  
-    The generated plan is handed off to the Low-Level Controller, which sequentially executes each atomic action. The controller uses the world connector to send commands (via Telnet) to the game environment.
-    
-    \item \textbf{World State Monitoring:}  
-    Throughout execution, the world connector continuously receives updated world state information. This monitoring enables the system to verify if:
-    \begin{itemize}
-        \item The preconditions for the next action are still met.
-        \item The executed action produced the intended effects.
-        \item External events (e.g., interference from the other agent, disappearance of critical objects) necessitate plan revision.
-    \end{itemize}
-    
-    \item \textbf{Feedback and Re-planning:}  
-    If an atomic action fails or if the current world state invalidates the plan (for instance, due to unexpected interference), the Low-Level Controller interrupts the ongoing plan execution. A detailed report, including the failure mode and current world context, is sent back to the LLM. The LLM can then use this feedback to choose a new subgoal, and the planning process starts anew.
-    
-    \item \textbf{Error Handling and Robustness:}  
-    Robust error-handling mechanisms are in place to address discrepancies between the expected and actual world states. This includes:
-    \begin{itemize}
-        \item Logging all atomic action outcomes.
-        \item Dynamically adjusting action parameters via PID controllers.
-        \item Initiating recovery procedures when critical failures are detected.
-    \end{itemize}
-\end{enumerate}
-
-This tight integration of planning, execution, and feedback ensures that the deterministic strengths of the PDDL planner are leveraged while still allowing real-time adjustments based on dynamic game conditions.
+This work package contains the development of a conversion routine from the world description from the world connector to a problem file. Also the final definition of available actions for the domain file based on the drafts from the low level control work package is included. 
+A suitable planner for the generated files is then selected.
 
 \subsection{LLM Setup and Prompt Design}
-% Martin, Mohammad
+% TODO Martin, Mohammad
+% only include setup and provider selection here as Prompt design and in contect learning is already tackled in agent desctiption
 
 Since the agent runs on hardware with limited GPU resources, we rely on a remote API for the LLM. The chosen provider (e.g., Google Gemini) is expected to meet our usage constraints—less than 15 requests per minute (RPM), fewer than 1 million tokens per minute (TPM), and under 1,500 requests per day (RPD).
 
@@ -169,13 +181,7 @@ By combining a robust, remote LLM setup with a carefully designed prompt, our sy
 
 
 \subsection{Evaluation}
-First evaluation metric would be the number of diamonds captured by the agent itself or by collaborating with other agents in scenarios where the other agent offers help.
-To simulate a cooperating agent we can take manual control of the other player.
-Although our current plan does not include an active communication system for cooperation with other agents, we hope to indirectly achieve cooperation by detecting the locations of other objects and their previous movements and making an inference, thus completing the level.
-Another metric could be how long it takes to complete a level. The aim is to reduce the time required to complete a level with experience when keeping the llm history intact and enable in context learning over levels to improve decision-making skills. 
-Token efficiency is another criterion. At this point, an examination can be made regarding the simplicity and adequacy of the prompts sent to LMM. 
-We plan to obtain sufficient output with fewer and simpler prompts. 
-
+This work package includes the design of evaluation levels of different difficulty as well as running the experiments described in the agent evaluation section. As it requires a functional agent, it is the last task to be worked on in the project.
 
 \subsection{Deployment}
 The Goal of this work package is the creation of the final deliverable, a fully working docker container containing the agent. 
