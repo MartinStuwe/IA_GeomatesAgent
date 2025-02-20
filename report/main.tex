@@ -75,9 +75,6 @@ As inference on modern LLMs in computationally heavy and therefore causes high r
 To prepare the world description retrieved from the world connector for usage with a planner, it has to be converted to a discrete state space. Like in exercise 12 of the practicals, a rasterization is applied to model the planning problem in PDDL and use an automated planner. A domain file is created from the actions available for the current player type and their preconditions and effects. A problem file is created from the rasterized world description and the goal set by the LLM. The generated PPDL files are then fed to a planning system that delivers an action chain for the low level controller.
 
 \section{Learning through LLM in-context learning}
-% TODO Martin, Mohammad
-%As already briefly explained in the general agent concept, a state of the art large language model is used as a versatile learning element to ...  %TODO to complete with the details that are currently in the organisation section
-\section{Learning through LLM in-context learning}
 As already briefly explained in the general agent concept, a state-of-the-art large language model (LLM) is used as a versatile learning element 
 to dynamically adapt to the game environment. 
 The LLM is not explicitly fine-tuned on the game itself but leverages its pre-trained knowledge and in-context learning capabilities 
