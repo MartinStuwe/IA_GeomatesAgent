@@ -22,7 +22,8 @@ Additionally, [SBCL](https://sbcl.org) as LISP compiler is required. If you have
 Alternatively, you may use the provided Dockerfile to run the game in a virtual environment (tested only on machines with x86 processor).
 
 ### Docker
-Download [Docker](https://www.docker.com) and use the provided Dockerfile to build the game environment by <pre><code>docker build -t geomates:latest .</code></pre> (this may take a while, but is only required once). Then use <pre><code>docker run -p 8000:8000 -p 45678:45678 geomates:latest sbcl --script geomates.lisp</code></pre> to run the game. Note that you cannot provide own levels or change game parameters unless you modify the Docker container.
+Download [Docker](https://www.docker.com) and use the provided Dockerfile to build the game environment by <pre><code>docker build -t geomates:latest .</code></pre> (this may take a while, but is only required once). 
+Then use <pre><code>docker run -p 8000:8000 -p 45678:45678 geomates:latest sbcl --script geomates.lisp</code></pre> to run the game. Note that you cannot provide own levels or change game parameters unless you modify the Docker container.
 
 ### Windows using MSVC
 Follow the instructions for building below but use the Windows specific Makefile provided for building the library (thanks, Jendrik!). Note that you must adopt the path names inside the Makefile!

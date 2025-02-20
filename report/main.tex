@@ -13,6 +13,9 @@
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
+% Comment package for multi-line comments
+\usepackage{comment}
+
 \title{Concept Intelligent Agents Geomates Practicals}
 \author{Ali Baran Oez, Mohammad Ghassan Aburas, Martin Stuwe, Jendrik Stoltz}
 
@@ -72,9 +75,39 @@ As inference on modern LLMs in computationally heavy and therefore causes high r
 To prepare the world description retrieved from the world connector for usage with a planner, it has to be converted to a discrete state space. Like in exercise 12 of the practicals, a rasterization is applied to model the planning problem in PDDL and use an automated planner. A domain file is created from the actions available for the current player type and their preconditions and effects. A problem file is created from the rasterized world description and the goal set by the LLM. The generated PPDL files are then fed to a planning system that delivers an action chain for the low level controller.
 
 \section{Learning through LLM in-context learning}
-
 % TODO Martin, Mohammad
-As already briefly explained in the general agent concept, a state of the art large language model is used as a versatile learning element to ...  TODO to complete with the details that are currently in the organisation section
+%As already briefly explained in the general agent concept, a state of the art large language model is used as a versatile learning element to ...  %TODO to complete with the details that are currently in the organisation section
+\section{Learning through LLM in-context learning}
+As already briefly explained in the general agent concept, a state-of-the-art large language model (LLM) is used as a versatile learning element 
+to dynamically adapt to the game environment. 
+The LLM is not explicitly fine-tuned on the game itself but leverages its pre-trained knowledge and in-context learning capabilities 
+to improve decision-making over time. Instead of relying on conventional reinforcement learning, 
+which requires extensive training data and rewards, the LLM refines its planning through repeated interactions and contextual updates.
+
+\subsection{Adaptive Decision-Making through In-Context Learning}
+In-context learning enables the LLM to adjust its responses dynamically without modifying its weights. 
+By providing structured prompts that include historical observations, world states, and agent actions, 
+the LLM can iteratively refine its goal-setting and decision-making. 
+This method allows the agent to leverage accumulated experience while maintaining adaptability to new situations. 
+The interaction loop between the LLM and the planning module ensures that goal selection is continuously improved based on past successes and failures.
+
+\subsection{Integration with PDDL for Logical Planning}
+To ensure deterministic and efficient planning, the LLM-generated sub-goals are integrated with a Planning Domain Definition Language (PDDL)-based planner. 
+The PDDL framework provides a structured representation of the environment, encoding available actions, their preconditions, and effects. 
+The agent translates high-level LLM recommendations into PDDL problem files,
+which are then processed by a planner to generate precise, executable action sequences.
+By leveraging PDDL, the system mitigates LLM hallucinations, ensuring that proposed actions adhere to logical constraints. 
+The generated plans undergo verification, with execution monitored for deviations that may necessitate replanning. 
+This hybrid approach allows the agent to combine the adaptability of LLM-based goal selection with the structured precision of symbolic planning.
+
+\subsection{Learning from Failures and Continuous Refinement}
+To enhance decision-making efficiency, the agent systematically tracks failed plans and adapts subsequent goal-setting accordingly. 
+If a generated plan fails due to unexpected environmental changes or incorrect assumptions, 
+the failure is reported back to the LLM along with an updated world state. 
+This enables the agent to avoid repeating past mistakes and gradually refine its strategy over multiple game runs.
+By integrating in-context learning with symbolic planning, the agent achieves a balance between flexibility and determinism. 
+This iterative learning process ensures continual improvement in planning efficiency, adaptability to dynamic environments, 
+and better coordination in multi-agent interactions.
 
 \section{Collaboration}
 
@@ -123,11 +156,12 @@ A draft of preconditions and effects of the atomic actions for later use in the 
 This work package contains the development of a conversion routine from the world description from the world connector to a problem file. Also the final definition of available actions for the domain file based on the drafts from the low level control work package is included. 
 A suitable planner for the generated files is then selected.
 
-\subsection{LLM Setup and Prompt Design}
+\subsection{LLM Setup and Provider Selection}
 % TODO Martin, Mohammad
 % only include setup and provider selection here as Prompt design and in contect learning is already tackled in agent desctiption
 
 Since the agent runs on hardware with limited GPU resources, we rely on a remote API for the LLM. The chosen provider (e.g., Google Gemini) is expected to meet our usage constraints—less than 15 requests per minute (RPM), fewer than 1 million tokens per minute (TPM), and under 1,500 requests per day (RPD).
+
 
 \textbf{API Setup:}
 \begin{itemize}
@@ -141,6 +175,8 @@ Since the agent runs on hardware with limited GPU resources, we rely on a remote
     Given our relatively low usage expectations, the API configuration is optimized to maintain low latency while ensuring that each prompt-response cycle is efficient.
 \end{itemize}
 
+
+\begin{comment}
 \textbf{Prompt Design:}
 \begin{itemize}
     \item \textbf{Compact World Representation:}  
@@ -177,7 +213,7 @@ Task: Based on the above state, determine the next viable subgoal that advances 
 Once the prompt is sent to the LLM, the response is parsed to extract the recommended subgoal. This subgoal is then forwarded to the PDDL planner for generating the corresponding sequence of atomic actions, thereby closing the loop between high-level reasoning and low-level execution.
 
 By combining a robust, remote LLM setup with a carefully designed prompt, our system leverages the flexible reasoning capabilities of the LLM while maintaining deterministic control through grounded planning.
-
+\end{comment}
 
 
 \subsection{Evaluation}
