@@ -1,13 +1,14 @@
 import re
 
 from agent.util import AgentType
+from agent.util import NO_ACT_KEY
 
 
 class WorldConnector:
     def __init__(self):
         self.agent_type = AgentType.UNKNOWN
         self.world_parser = WorldParser()
-        self.handlers = []  # List to store handler functions
+        self.handler = None  # List to store handler functions
 
     def _check_for_agent_hint(self, msg):
         return ":playing" in msg
@@ -22,22 +23,21 @@ class WorldConnector:
     
     def register_handler(self, handler):
         """Register a new handler function for world messages."""
-        self.handlers.append(handler)
+        self.handler = handler
 
     def handle_world_msg(self, message):
-        handler_returns = []
+        handler_return = None
         """Handles the world message and calls the appropriate handler functions."""
         if self.agent_type == AgentType.UNKNOWN and self._check_for_agent_hint(message):
             self._parse_agent_hint(message)
             print(f"I am a {self.agent_type}")
         else:
             self.world_parser.parse_description(message)
-            # Call all registered handlers
-            for handler in self.handlers:
-                handler_return=handler(message) # Call the handler with the message
-                if handler_return is not None:
-                    handler_returns.append(handler_return)
-        return handler_returns
+            if self.handler is not None:
+                handler_return = self.handler(message) # Call the handler with the message
+            else: 
+                handler_return = NO_ACT_KEY
+        return handler_return
     
     # Additional methods to retrieve world data
     def get_disc(self):

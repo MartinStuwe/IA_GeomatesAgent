@@ -2,12 +2,12 @@ import telnetlib
 import select
 
 class TelnetClient:
-    def __init__(self, host, port, timeout=10, encoding="utf-8"):
+    def __init__(self, host, port, timeout=10, encoding="ascii"):
         self.host = host
         self.port = port
         self.timeout = timeout
         self.telnet = None
-        default_encoding = encoding
+        self.default_encoding = encoding
 
     def connect(self):
         """Establishes a connection to the Telnet server."""
