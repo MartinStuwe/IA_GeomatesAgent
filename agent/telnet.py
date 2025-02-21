@@ -21,7 +21,7 @@ class TelnetClient:
         """Sends a message to the Telnet server."""
         try:
             if self.telnet:
-                self.telnet.write(message.encode(self.default_encoding) + b"\n")
+                self.telnet.write(message.encode(self.default_encoding))
                 # print(f"Sent: {message}")
         except Exception as e:
             print(f"Error sending message: {e}")
